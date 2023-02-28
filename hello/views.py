@@ -1,42 +1,27 @@
-from django.shortcuts import render
+# import re
+# from django.shortcuts import render
 from django.utils.timezone import datetime
-from django.http import HttpResponse
 from .models import LogMessage
-from hello.forms import LogMessageForm
-from django.shortcuts import redirect
-from django.views.generic import ListView
-import datetime
+
+# Rest Framework
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from .serializers import LogMessageSerializer
+from rest_framework import status
 
 
-class HomeListView(ListView):
-    """Renders the home page, with a list of all messages."""
-    model = LogMessage
+@api_view(['GET', 'POST'])
+def get_all(request):
+    "get all avielable logs"
+    if request.method == 'GET':
+        logs = LogMessage.objects.all()
+        serializer = LogMessageSerializer(logs, many=True)
+        return Response({'status': True, 'data': serializer.data, 'message': 'Success'})
 
-    def get_context_data(self, **kwargs):
-        context = super(HomeListView, self).get_context_data(**kwargs)
-        return context
-
-
-def about(request):
-    return render(request, "hello/about.html")
-
-
-def contact(request):
-    return render(request, "hello/contact.html")
-
-
-# make the view for the data
-def log_message(request):
-    form = LogMessageForm(request.POST or None)
-
-    if request.method == "POST":
-        if form.is_valid():
-            message = form.save(commit=False)
-            message.log_date = datetime.datetime.now()
-            message.save()
-            # here we use the redirect mehtod for not use the hard coded
-            return redirect("home")
-            # here we use this also
-            # return render(request,"hello/home.html")
-    else:
-        return render(request, "hello/log_message.html", {"form": form})
+    if request.method == 'POST':
+        data = request.data
+        data['log_date'] = datetime.now()
+        serializer = LogMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'status': True, 'data': serializer.data, 'message': 'Data created'}, status=status.HTTP_201_CREATED)
